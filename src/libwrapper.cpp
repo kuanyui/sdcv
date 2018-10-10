@@ -168,8 +168,9 @@ std::string html2text(const char *p, bool colorize_output)
             } else if (g_str_has_prefix(p, "&apos;")) {
                 res += "\'";
                 p += 5;
-            } else
+            } else {
                 res += *p;
+            }
             continue;
         }
 
@@ -185,10 +186,6 @@ std::string html2text(const char *p, bool colorize_output)
             res += colorize_output ? ESC::end : "";
         } else if (name.compare(0, 2, "br") == 0) {
             res += "\n";
-        } else if (name == "kref") {
-            res += colorize_output ? FMT::kref : "";
-        } else if (name == "/kref") {
-            res += colorize_output ? ESC::end : "";
         } else if (name == "b") {
             res += colorize_output ? ESC::bold : "";
         } else if (name == "/b") {
@@ -197,12 +194,6 @@ std::string html2text(const char *p, bool colorize_output)
             res += colorize_output ? ESC::italic : "";
         } else if (name == "/i") {
             res += colorize_output ? ESC::end : "";
-        } else if (name == "tr") {
-            if (colorize_output) { res += FMT::transcription; }
-            res += "[";
-        } else if (name == "/tr") {
-            res += "]";
-            if (colorize_output) { res += ESC::end; }
         } else if (name.compare(0, 2, "hr") == 0) {
             if (colorize_output) { res += FMT::hr; }
             res += "\n--------------------\n";
@@ -210,6 +201,22 @@ std::string html2text(const char *p, bool colorize_output)
         }
 
         p = next;
+    }
+    return res;
+}
+
+std::string kingsoft2text (const char *p, bool colorize_output) {
+    (void) colorize_output;  // TODO: colorize?
+    std::string res;
+    for (; *p; ++p) {
+        const char *beg = strstr(p, "![CDATA[");
+        if (!beg) { continue; }
+        beg += 8;
+        const char *end = strchr(beg, ']');
+        if (!end) { continue; }
+        res += std::string(beg, static_cast<size_t>(end - beg));
+        res += '\n';
+        p = beg;
     }
     return res;
 }
@@ -273,6 +280,15 @@ std::string parse_data(const gchar *data, bool colorize_output)
             sec_size++;
             break;
         case 'k': // KingSoft PowerWord data
+            sec_size = static_cast<guint32>(strlen(p));
+            if (sec_size) {
+                res += "\n";
+                m_str = g_strndup(p, sec_size);
+                res += kingsoft2text(m_str, colorize_output);
+                g_free(m_str);
+            }
+            sec_size++;
+            break;
         case 'y': // chinese YinBiao or japanese kana, utf-8
             sec_size = static_cast<guint32>(strlen(p));
             if (sec_size)
