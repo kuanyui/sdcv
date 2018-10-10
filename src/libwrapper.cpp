@@ -146,7 +146,7 @@ static std::string parse_data(const gchar *data, bool colorize_output)
         case 'w': // WikiMedia markup data
         case 'm': // plain text, utf-8
         case 'l': // not utf-8, some other locale encoding, discouraged, need more work...
-            sec_size = strlen(p);
+            sec_size = static_cast<guint32>(strlen(p));
             if (sec_size) {
                 res += "\n";
                 m_str = g_strndup(p, sec_size);
@@ -157,7 +157,7 @@ static std::string parse_data(const gchar *data, bool colorize_output)
             break;
         case 'g': // pango markup data
         case 'x': // xdxf
-            sec_size = strlen(p);
+            sec_size = static_cast<guint32>(strlen(p));
             if (sec_size) {
                 res += "\n";
                 m_str = g_strndup(p, sec_size);
@@ -167,7 +167,7 @@ static std::string parse_data(const gchar *data, bool colorize_output)
             sec_size++;
             break;
         case 't': // english phonetic string
-            sec_size = strlen(p);
+            sec_size = static_cast<guint32>(strlen(p));
             if (sec_size) {
                 res += "\n";
                 if (colorize_output)
@@ -180,7 +180,7 @@ static std::string parse_data(const gchar *data, bool colorize_output)
             break;
         case 'k': // KingSoft PowerWord data
         case 'y': // chinese YinBiao or japanese kana, utf-8
-            sec_size = strlen(p);
+            sec_size = static_cast<guint32>(strlen(p));
             if (sec_size)
                 res += std::string(p, sec_size);
             sec_size++;
