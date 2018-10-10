@@ -33,23 +33,40 @@
 
 #include "libwrapper.hpp"
 
-static const char ESC_BLUE[] = "\033[0;34m";
-static const char ESC_END[] = "\033[0m";
-static const char ESC_BOLD[] = "\033[1m";
-static const char ESC_ITALIC[] = "\033[3m";
-static const char ESC_LIGHT_GRAY[] = "\033[0;37m";
-static const char ESC_GREEN[] = "\033[0;32m";
-static const char ESC_GRAY[] = "\033[0;90m";
+namespace {
+namespace ESC {
+const char end[]       = "\033[0m";
+const char bold[]      = "\033[1m";
+const char italic[]    = "\033[3m";
+const char black[]     = "\033[0;30m";
+const char red[]       = "\033[0;31m";
+const char green[]     = "\033[0;32m";
+const char yellow[]    = "\033[0;33m";
+const char blue[]      = "\033[0;34m";
+const char magenta[]   = "\033[0;35m";
+const char cyan[]      = "\033[0;36m";
+const char white[]     = "\033[0;37m";
+const char b_black[]   = "\033[0;90m";
+const char b_red[]     = "\033[0;91m";
+const char b_green[]   = "\033[0;92m";
+const char b_yellow[]  = "\033[0;93m";
+const char b_blue[]    = "\033[0;94m";
+const char b_magenta[] = "\033[0;95m";
+const char b_cyan[]    = "\033[0;96m";
+const char b_white[]   = "\033[0;97m";
+}
 
-static const char *SEARCH_TERM_VISFMT = ESC_BOLD;
-static const char *NAME_OF_DICT_VISFMT = ESC_BLUE;
-static const char *TRANSCRIPTION_VISFMT = ESC_BOLD;
-static const char *EXAMPLE_VISFMT = ESC_LIGHT_GRAY;
-static const char *KREF_VISFMT = ESC_BOLD;
-static const char *ABR_VISFMT = ESC_GREEN;
-static const char *HR_VISFMT = ESC_GRAY;
+namespace FMT {
+const char *search_term   = ESC::bold;
+const char *name_of_dict  = ESC::b_blue;
+const char *transcription = ESC::bold;
+const char *example       = ESC::white;
+const char *kref          = ESC::bold;
+const char *abr           = ESC::green;
+const char *hr            = ESC::b_black;
+}
 
-static std::string xdxf2text(const char *p, bool colorize_output)
+std::string xdxf2text(const char *p, bool colorize_output)
 {
     std::string res;
     for (; *p; ++p) {
@@ -80,9 +97,9 @@ static std::string xdxf2text(const char *p, bool colorize_output)
 
         const std::string name(p + 1, next - p - 1);
         if (name == "abr")
-            res += colorize_output ? ABR_VISFMT : "";
+            res += colorize_output ? FMT::abr : "";
         else if (name == "/abr")
-            res += colorize_output ? ESC_END : "";
+            res += colorize_output ? ESC::end : "";
         else if (name == "k") {
             const char *begin = next;
             if ((next = strstr(begin, "</k>")) != nullptr)
@@ -90,29 +107,29 @@ static std::string xdxf2text(const char *p, bool colorize_output)
             else
                 next = begin;
         } else if (name == "kref") {
-            res += colorize_output ? KREF_VISFMT : "";
+            res += colorize_output ? FMT::kref : "";
         } else if (name == "/kref") {
-            res += colorize_output ? ESC_END : "";
+            res += colorize_output ? ESC::end : "";
         } else if (name == "b")
-            res += colorize_output ? ESC_BOLD : "";
+            res += colorize_output ? ESC::bold : "";
         else if (name == "/b")
-            res += colorize_output ? ESC_END : "";
+            res += colorize_output ? ESC::end : "";
         else if (name == "i")
-            res += colorize_output ? ESC_ITALIC : "";
+            res += colorize_output ? ESC::italic : "";
         else if (name == "/i")
-            res += colorize_output ? ESC_END : "";
+            res += colorize_output ? ESC::end : "";
         else if (name == "tr") {
             if (colorize_output)
-                res += TRANSCRIPTION_VISFMT;
+                res += FMT::transcription;
             res += "[";
         } else if (name == "/tr") {
             res += "]";
             if (colorize_output)
-                res += ESC_END;
+                res += ESC::end;
         } else if (name == "ex")
-            res += colorize_output ? EXAMPLE_VISFMT : "";
+            res += colorize_output ? FMT::example : "";
         else if (name == "/ex")
-            res += colorize_output ? ESC_END : "";
+            res += colorize_output ? ESC::end : "";
         else if (!name.empty() && name[0] == 'c' && name != "co") {
             std::string::size_type pos = name.find("code");
             if (pos != std::string::npos) {
@@ -131,7 +148,7 @@ static std::string xdxf2text(const char *p, bool colorize_output)
     return res;
 }
 
-static std::string html2text(const char *p, bool colorize_output)
+std::string html2text(const char *p, bool colorize_output)
 {
     std::string res;
     for (; *p; ++p) {
@@ -163,33 +180,33 @@ static std::string html2text(const char *p, bool colorize_output)
         std::string name(p + 1, next - p - 1);
         std::transform(name.begin(), name.end(), name.begin(), ::tolower);
         if (name.compare(0, 4, "font") == 0) {
-            res += colorize_output ? ABR_VISFMT : "";
+            res += colorize_output ? FMT::abr : "";
         } else if (name.compare(0, 5, "/font") == 0) {
-            res += colorize_output ? ESC_END : "";
+            res += colorize_output ? ESC::end : "";
         } else if (name.compare(0, 2, "br") == 0) {
             res += "\n";
         } else if (name == "kref") {
-            res += colorize_output ? KREF_VISFMT : "";
+            res += colorize_output ? FMT::kref : "";
         } else if (name == "/kref") {
-            res += colorize_output ? ESC_END : "";
+            res += colorize_output ? ESC::end : "";
         } else if (name == "b") {
-            res += colorize_output ? ESC_BOLD : "";
+            res += colorize_output ? ESC::bold : "";
         } else if (name == "/b") {
-            res += colorize_output ? ESC_END : "";
+            res += colorize_output ? ESC::end : "";
         } else if (name == "i" || name == "I") {
-            res += colorize_output ? ESC_ITALIC : "";
+            res += colorize_output ? ESC::italic : "";
         } else if (name == "/i") {
-            res += colorize_output ? ESC_END : "";
+            res += colorize_output ? ESC::end : "";
         } else if (name == "tr") {
-            if (colorize_output) { res += TRANSCRIPTION_VISFMT; }
+            if (colorize_output) { res += FMT::transcription; }
             res += "[";
         } else if (name == "/tr") {
             res += "]";
-            if (colorize_output) { res += ESC_END; }
+            if (colorize_output) { res += ESC::end; }
         } else if (name.compare(0, 2, "hr") == 0) {
-            if (colorize_output) { res += HR_VISFMT; }
+            if (colorize_output) { res += FMT::hr; }
             res += "\n--------------------\n";
-            if (colorize_output) { res += ESC_END; }
+            if (colorize_output) { res += ESC::end; }
         }
 
         p = next;
@@ -197,7 +214,7 @@ static std::string html2text(const char *p, bool colorize_output)
     return res;
 }
 
-static std::string parse_data(const gchar *data, bool colorize_output)
+std::string parse_data(const gchar *data, bool colorize_output)
 {
     if (!data)
         return "";
@@ -248,10 +265,10 @@ static std::string parse_data(const gchar *data, bool colorize_output)
             if (sec_size) {
                 res += "\n";
                 if (colorize_output)
-                    res += TRANSCRIPTION_VISFMT;
+                    res += FMT::transcription;
                 res += "[" + std::string(p, sec_size) + "]";
                 if (colorize_output)
-                    res += ESC_END;
+                    res += ESC::end;
             }
             sec_size++;
             break;
@@ -273,7 +290,7 @@ static std::string parse_data(const gchar *data, bool colorize_output)
 
     return res;
 }
-
+}
 void Library::SimpleLookup(const std::string &str, TSearchResultList &res_list)
 {
     glong ind;
@@ -351,12 +368,12 @@ void Library::print_search_result(FILE *out, const TSearchResult &res, bool &fir
                 "-->%s%s%s\n"
                 "-->%s%s%s\n"
                 "%s\n\n",
-                colorize_output_ ? NAME_OF_DICT_VISFMT : "",
+                colorize_output_ ? FMT::name_of_dict : "",
                 utf8_output_ ? res.bookname.c_str() : loc_bookname.c_str(),
-                colorize_output_ ? ESC_END : "",
-                colorize_output_ ? SEARCH_TERM_VISFMT : "",
+                colorize_output_ ? ESC::end : "",
+                colorize_output_ ? FMT::search_term : "",
                 utf8_output_ ? res.def.c_str() : loc_def.c_str(),
-                colorize_output_ ? ESC_END : "",
+                colorize_output_ ? ESC::end : "",
                 utf8_output_ ? res.exp.c_str() : loc_exp.c_str());
     }
 }
@@ -479,12 +496,12 @@ bool Library::process_phrase(const char *loc_str, IReadLine &io, bool force)
                 const std::string loc_bookname = utf8_to_locale_ign_err(res_list[i].bookname);
                 const std::string loc_def = utf8_to_locale_ign_err(res_list[i].def);
                 printf("%zu)%s%s%s-->%s%s%s\n", i,
-                       colorize_output_ ? NAME_OF_DICT_VISFMT : "",
+                       colorize_output_ ? FMT::name_of_dict : "",
                        utf8_output_ ? res_list[i].bookname.c_str() : loc_bookname.c_str(),
-                       colorize_output_ ? ESC_END : "",
-                       colorize_output_ ? SEARCH_TERM_VISFMT : "",
+                       colorize_output_ ? ESC::end : "",
+                       colorize_output_ ? FMT::search_term : "",
                        utf8_output_ ? res_list[i].def.c_str() : loc_def.c_str(),
-                       colorize_output_ ? ESC_END : "");
+                       colorize_output_ ? ESC::end : "");
             }
             int choise;
             std::unique_ptr<IReadLine> choice_readline(create_readline_object());
