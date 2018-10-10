@@ -25,6 +25,7 @@
 #include <cstring>
 #include <map>
 #include <memory>
+#include <algorithm>
 
 #include <glib/gi18n.h>
 
@@ -38,6 +39,7 @@ static const char ESC_BOLD[] = "\033[1m";
 static const char ESC_ITALIC[] = "\033[3m";
 static const char ESC_LIGHT_GRAY[] = "\033[0;37m";
 static const char ESC_GREEN[] = "\033[0;32m";
+static const char ESC_GRAY[] = "\033[0;90m";
 
 static const char *SEARCH_TERM_VISFMT = ESC_BOLD;
 static const char *NAME_OF_DICT_VISFMT = ESC_BLUE;
@@ -45,6 +47,7 @@ static const char *TRANSCRIPTION_VISFMT = ESC_BOLD;
 static const char *EXAMPLE_VISFMT = ESC_LIGHT_GRAY;
 static const char *KREF_VISFMT = ESC_BOLD;
 static const char *ABR_VISFMT = ESC_GREEN;
+static const char *HR_VISFMT = ESC_GRAY;
 
 static std::string xdxf2text(const char *p, bool colorize_output)
 {
@@ -76,7 +79,6 @@ static std::string xdxf2text(const char *p, bool colorize_output)
             continue;
 
         const std::string name(p + 1, next - p - 1);
-
         if (name == "abr")
             res += colorize_output ? ABR_VISFMT : "";
         else if (name == "/abr")
@@ -129,6 +131,72 @@ static std::string xdxf2text(const char *p, bool colorize_output)
     return res;
 }
 
+static std::string html2text(const char *p, bool colorize_output)
+{
+    std::string res;
+    for (; *p; ++p) {
+        if (*p != '<') {
+            if (g_str_has_prefix(p, "&gt;")) {
+                res += ">";
+                p += 3;
+            } else if (g_str_has_prefix(p, "&lt;")) {
+                res += "<";
+                p += 3;
+            } else if (g_str_has_prefix(p, "&amp;")) {
+                res += "&";
+                p += 4;
+            } else if (g_str_has_prefix(p, "&quot;")) {
+                res += "\"";
+                p += 5;
+            } else if (g_str_has_prefix(p, "&apos;")) {
+                res += "\'";
+                p += 5;
+            } else
+                res += *p;
+            continue;
+        }
+
+        const char *next = strchr(p, '>');
+        if (!next)
+            continue;
+
+        std::string name(p + 1, next - p - 1);
+        std::transform(name.begin(), name.end(), name.begin(), ::tolower);
+        if (name.compare(0, 4, "font") == 0) {
+            res += colorize_output ? ABR_VISFMT : "";
+        } else if (name.compare(0, 5, "/font") == 0) {
+            res += colorize_output ? ESC_END : "";
+        } else if (name.compare(0, 2, "br") == 0) {
+            res += "\n";
+        } else if (name == "kref") {
+            res += colorize_output ? KREF_VISFMT : "";
+        } else if (name == "/kref") {
+            res += colorize_output ? ESC_END : "";
+        } else if (name == "b") {
+            res += colorize_output ? ESC_BOLD : "";
+        } else if (name == "/b") {
+            res += colorize_output ? ESC_END : "";
+        } else if (name == "i" || name == "I") {
+            res += colorize_output ? ESC_ITALIC : "";
+        } else if (name == "/i") {
+            res += colorize_output ? ESC_END : "";
+        } else if (name == "tr") {
+            if (colorize_output) { res += TRANSCRIPTION_VISFMT; }
+            res += "[";
+        } else if (name == "/tr") {
+            res += "]";
+            if (colorize_output) { res += ESC_END; }
+        } else if (name.compare(0, 2, "hr") == 0) {
+            if (colorize_output) { res += HR_VISFMT; }
+            res += "\n--------------------\n";
+            if (colorize_output) { res += ESC_END; }
+        }
+
+        p = next;
+    }
+    return res;
+}
+
 static std::string parse_data(const gchar *data, bool colorize_output)
 {
     if (!data)
@@ -143,6 +211,15 @@ static std::string parse_data(const gchar *data, bool colorize_output)
     while (guint32(p - data) < data_size) {
         switch (*p++) {
         case 'h': // HTML data
+            sec_size = static_cast<guint32>(strlen(p));
+            if (sec_size) {
+                res += "\n";
+                m_str = g_strndup(p, sec_size);
+                res += html2text(m_str, colorize_output);
+                g_free(m_str);
+            }
+            sec_size++;
+            break;
         case 'w': // WikiMedia markup data
         case 'm': // plain text, utf-8
         case 'l': // not utf-8, some other locale encoding, discouraged, need more work...
